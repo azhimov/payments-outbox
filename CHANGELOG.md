@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-11-12
 
 ### Added
 - Orders and payments API for the fictional Demo Store: merchants with API keys (sha256), per-merchant Idempotency-Key on payments and refunds (azhimov/laravel-idempotency).
@@ -17,3 +17,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `make chaos` (`demo:load` + `demo:verify`) and a chaos-smoke CI job.
 - nginx answers 502 `api_unreachable` / 504 `api_timeout` in the API's JSON error format when php-fpm cannot be reached, documented in OpenAPI.
 - docker compose: api, nginx, fake-psp, relay ×2, ledger, scheduler, PostgreSQL 17, Redis 7, RabbitMQ 4, Prometheus, Grafana, Swagger UI.
+
+[0.1.0]: https://github.com/azhimov/payments-outbox/releases/tag/v0.1.0
