@@ -26,9 +26,9 @@ chaos: ## Prove it: retried payments, PSP timeouts and 5xx, the relay killed, Ra
 	docker compose down --remove-orphans
 	$(CHAOS_ENV) docker compose up -d --build --wait
 	@echo ">> chaos: $(ORDERS) orders, 10% PSP timeouts, 5% PSP 503"
-	docker compose run --rm cli php artisan demo:load --orders=$(ORDERS) & LOAD=$$!; \
+	docker compose run --rm -T cli php artisan demo:load --orders=$(ORDERS) & LOAD=$$!; \
 	sleep $(KILL_AFTER); echo ">> chaos: kill the relay"; docker compose kill relay; \
 	sleep 10; echo ">> chaos: restart RabbitMQ"; docker compose restart rabbitmq; \
 	sleep 10; echo ">> chaos: relay back"; $(CHAOS_ENV) docker compose up -d relay; \
 	wait $$LOAD
-	docker compose run --rm cli php artisan demo:verify --wait=300 --report=storage/chaos/report.json
+	docker compose run --rm -T cli php artisan demo:verify --wait=300 --report=storage/chaos/report.json
