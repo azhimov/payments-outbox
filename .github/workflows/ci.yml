@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (PostgreSQL, Redis, RabbitMQ) + coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: payments
+          POSTGRES_USER: payments
+          POSTGRES_PASSWORD: payments
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U payments -d payments"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      rabbitmq:
+        image: rabbitmq:4
+        ports: ['5672:5672']
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_pgsql, pdo_sqlite, sockets, pcntl
+          coverage: pcov
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests with coverage
+        run: vendor/bin/pest --ci --coverage --min=85
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: payments
+          DB_USERNAME: payments
+          DB_PASSWORD: payments
+          REDIS_CLIENT: predis
+          REDIS_HOST: 127.0.0.1
+          OUTBOX_RABBITMQ_HOST: 127.0.0.1
+
+  quality:
+    name: Static analysis & code style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      - name: Larastan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+  docker:
+    name: Docker image and compose file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate compose file
+        run: docker compose config --quiet
+
+      - name: Build the app image
+        run: docker compose build api
