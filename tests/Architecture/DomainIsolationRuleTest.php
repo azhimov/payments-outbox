@@ -13,6 +13,23 @@ use Tools\PhpStan\DomainIsolationRule;
  */
 final class DomainIsolationRuleTest extends RuleTestCase
 {
+    /**
+     * On a fresh machine (every CI run) PHPStan's test container reads its directory
+     * listings cache before it exists. PHPStan silences that read with @ and PHPUnit
+     * ignores silenced warnings, but Pest's printer (Collision 8.9) still reports it.
+     * An empty file is what PHPStan treats as "no listings yet", and it rewrites it.
+     */
+    public static function setUpBeforeClass(): void
+    {
+        $cache = sys_get_temp_dir().'/phpstan-tests/cache';
+        if (! is_dir($cache)) {
+            mkdir($cache, 0777, true);
+        }
+        if (! is_file($cache.'/directory-listings.bin')) {
+            touch($cache.'/directory-listings.bin');
+        }
+    }
+
     protected function getRule(): Rule
     {
         return new DomainIsolationRule($this->createReflectionProvider());
