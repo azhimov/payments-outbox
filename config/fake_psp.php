@@ -21,6 +21,11 @@ return [
     ],
 
     'latency_ms' => (int) env('FAKE_PSP_LATENCY_MS', 50),
+
+    // Pending charges get their final status by webhook after this delay.
+    'webhook_delay_ms' => (int) env('FAKE_PSP_WEBHOOK_DELAY_MS', 2000),
+    // Share of webhooks sent twice with the same event id (real PSPs do retry).
+    'webhook_duplicate_rate' => (float) env('FAKE_PSP_WEBHOOK_DUPLICATE_RATE', 0.2),
     // How long a "timeout" answer is held back; keep it above services.psp.timeout.
     'timeout_sleep_ms' => (int) env('FAKE_PSP_TIMEOUT_SLEEP_MS', 5000),
 ];

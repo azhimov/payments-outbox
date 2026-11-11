@@ -2,4 +2,7 @@
 
 declare(strict_types=1);
 
-// Scheduled tasks are registered here (payments:reconcile comes with the webhook step).
+use Illuminate\Support\Facades\Schedule;
+
+// Stuck payments (lost webhook, timeout, crash) are finished by asking the PSP.
+Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();

@@ -48,6 +48,18 @@ final class EloquentPaymentRepository implements PaymentRepository
         return $model === null ? null : self::toDomain($model);
     }
 
+    public function processingSince(\DateTimeImmutable $before, int $limit): array
+    {
+        return array_values(PaymentModel::query()
+            ->where('status', PaymentStatus::Processing->value)
+            ->where('updated_at', '<', $before)
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id))
+            ->all());
+    }
+
     private static function toDomain(PaymentModel $model): Payment
     {
         $currency = Currency::from($model->currency);

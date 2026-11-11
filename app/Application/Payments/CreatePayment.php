@@ -30,6 +30,7 @@ final readonly class CreatePayment
         private PaymentOutcomes $outcomes,
         private IdGenerator $ids,
         private TransactionRunner $transaction,
+        private ?string $webhookUrl = null,
     ) {}
 
     public function handle(CreatePaymentCommand $command): Payment
@@ -44,7 +45,7 @@ final readonly class CreatePayment
         $payment->startProcessing();
         $this->transaction->run(fn () => $this->payments->save($payment));
 
-        $result = $this->gateway->charge(new ChargeRequest($payment->id, $payment->amount, $command->cardToken));
+        $result = $this->gateway->charge(new ChargeRequest($payment->id, $payment->amount, $command->cardToken, $this->webhookUrl));
 
         return $this->outcomes->apply($payment->id, $result);
     }

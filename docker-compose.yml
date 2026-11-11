@@ -63,6 +63,25 @@ services:
       rabbitmq-setup:
         condition: service_completed_successfully
 
+  # Laravel scheduler: payments:reconcile every minute.
+  scheduler:
+    <<: *app
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # The fake PSP's webhook sender (settles pending charges, sometimes sends twice).
+  fake-psp-webhooks:
+    <<: *app
+    command: ["php", "artisan", "psp:deliver-webhooks"]
+    environment:
+      <<: *app-env
+      FAKE_PSP_ENABLED: "true"
+    depends_on:
+      api:
+        condition: service_healthy
+
   # The pretend acquirer: same image, its own routes (/psp/*) and outcomes set by env.
   fake-psp:
     <<: *app

@@ -18,4 +18,11 @@ interface PaymentRepository
 
     /** Locks the row until the surrounding transaction ends. */
     public function findForUpdate(string $id): ?Payment;
+
+    /**
+     * Ids of payments still processing and last touched before $before, oldest first.
+     *
+     * @return list<string>
+     */
+    public function processingSince(\DateTimeImmutable $before, int $limit): array;
 }
