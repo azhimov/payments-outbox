@@ -22,6 +22,7 @@ x-app: &app
     QUEUE_CONNECTION: sync
     OUTBOX_TRANSPORT: rabbitmq
     OUTBOX_RABBITMQ_HOST: rabbitmq
+    PSP_BASE_URL: http://fake-psp:8000
   depends_on:
     postgres:
       condition: service_healthy
@@ -41,6 +42,22 @@ services:
       interval: 5s
       timeout: 10s
       retries: 30
+
+  # The pretend acquirer: same image, its own routes (/psp/*) and outcomes set by env.
+  fake-psp:
+    <<: *app
+    command: ["php", "-S", "0.0.0.0:8000", "-t", "public"]
+    environment:
+      <<: *app-env
+      FAKE_PSP_ENABLED: "true"
+      PHP_CLI_SERVER_WORKERS: "8"
+      FAKE_PSP_DECLINE_RATE: "0.05"
+      FAKE_PSP_PENDING_RATE: "0.05"
+      FAKE_PSP_TIMEOUT_RATE: "0"
+      FAKE_PSP_ERROR_RATE: "0"
+    depends_on:
+      api:
+        condition: service_healthy
 
   web:
     image: nginx:1.27-alpine

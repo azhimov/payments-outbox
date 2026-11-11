@@ -8,3 +8,4 @@ use Tests\TestCase;
 require_once __DIR__.'/Support.php';
 
 pest()->extend(TestCase::class)->use(RefreshDatabase::class)->in('Feature', 'Integration');
+pest()->extend(TestCase::class)->in('Contract');
