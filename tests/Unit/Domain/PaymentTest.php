@@ -122,3 +122,13 @@ it('restores a payment from storage without replaying its history', function ():
     expect($payment->status())->toBe(PaymentStatus::PartiallyRefunded)
         ->and($payment->refundable()->amount)->toBe(6_000);
 });
+
+it('keeps the PSP reference of a pending charge while processing', function (): void {
+    $payment = paymentIn(PaymentStatus::Processing);
+    $payment->recordPspReference('psp-pending');
+
+    expect($payment->pspPaymentId())->toBe('psp-pending')
+        ->and($payment->status())->toBe(PaymentStatus::Processing);
+
+    paymentIn(PaymentStatus::Succeeded)->recordPspReference('psp-other');
+})->throws(InvalidPaymentTransition::class);

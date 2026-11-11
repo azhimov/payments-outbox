@@ -59,6 +59,18 @@ final class Payment
         $this->pspPaymentId = $pspPaymentId;
     }
 
+    /**
+     * The PSP accepted the charge but has no final answer yet (pending): keep its reference.
+     */
+    public function recordPspReference(string $pspPaymentId): void
+    {
+        if ($this->status !== PaymentStatus::Processing) {
+            throw InvalidPaymentTransition::between($this->id, $this->status, $this->status);
+        }
+
+        $this->pspPaymentId = $pspPaymentId;
+    }
+
     public function decline(string $reason): void
     {
         $this->moveTo(PaymentStatus::Declined);

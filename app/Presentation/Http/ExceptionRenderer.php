@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http;
 
+use App\Application\Payments\Exceptions\OrderAlreadyPaid;
+use App\Application\Payments\Exceptions\OrderNotFound;
+use App\Application\Payments\Exceptions\PaymentAlreadyInProgress;
 use App\Domain\Order\Exceptions\InvalidOrder;
 use App\Domain\Payment\Exceptions\InvalidPaymentTransition;
 use App\Domain\Payment\Exceptions\RefundNotAllowed;
@@ -24,6 +27,18 @@ final class ExceptionRenderer
 
         $exceptions->render(fn (ValidationException $e, Request $request) => $api($request)
             ? ApiError::response(422, 'validation_failed', 'The request is invalid.', $e->errors())
+            : null);
+
+        $exceptions->render(fn (OrderNotFound $e, Request $request) => $api($request)
+            ? ApiError::response(404, 'not_found', 'Order not found.')
+            : null);
+
+        $exceptions->render(fn (OrderAlreadyPaid $e, Request $request) => $api($request)
+            ? ApiError::response(409, 'order_already_paid', 'The order is already paid.')
+            : null);
+
+        $exceptions->render(fn (PaymentAlreadyInProgress $e, Request $request) => $api($request)
+            ? ApiError::response(409, 'payment_in_progress', 'The order already has a payment that is processing or succeeded.')
             : null);
 
         $exceptions->render(fn (InvalidOrder $e, Request $request) => $api($request)

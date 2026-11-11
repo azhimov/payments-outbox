@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Infrastructure\Persistence\Models\MerchantModel;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 
 /**
  * Creates a merchant and returns its plain API key (only the sha256 is stored).
@@ -32,4 +33,16 @@ function orderPayload(array $overrides = []): array
             ['sku' => 'SKU-CUP', 'name' => 'Cup', 'quantity' => 1, 'unit_price' => 200_000],
         ],
     ], $overrides);
+}
+
+function createOrder(string $apiKey): string
+{
+    $id = test()->postJson('/api/orders', orderPayload(), ['X-Api-Key' => $apiKey])->assertCreated()->json('data.id');
+
+    return is_string($id) ? $id : throw new RuntimeException('no order id');
+}
+
+function pay(string $apiKey, string $orderId, string $key, array $body = ['card_token' => 'tok_visa']): TestResponse
+{
+    return test()->postJson("/api/orders/{$orderId}/payments", $body, ['X-Api-Key' => $apiKey, 'Idempotency-Key' => $key]);
 }
