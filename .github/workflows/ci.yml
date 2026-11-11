@@ -74,6 +74,7 @@ jobs:
           REDIS_CLIENT: predis
           REDIS_HOST: 127.0.0.1
           OUTBOX_RABBITMQ_HOST: 127.0.0.1
+          RABBITMQ_TESTS: '1'
 
   quality:
     name: Static analysis & code style

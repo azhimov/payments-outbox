@@ -43,6 +43,26 @@ services:
       timeout: 10s
       retries: 30
 
+  # Declares exchanges and queues once per `up`, then exits.
+  rabbitmq-setup:
+    <<: *app
+    command: ["php", "artisan", "rabbitmq:setup"]
+    restart: "no"
+
+  # Two relay workers on purpose: they share the outbox without double delivery and
+  # keep each order's events in order (laravel-outbox SKIP LOCKED + per-aggregate order).
+  relay:
+    <<: *app
+    command: ["php", "artisan", "outbox:relay"]
+    deploy:
+      replicas: 2
+    stop_grace_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+
   # The pretend acquirer: same image, its own routes (/psp/*) and outcomes set by env.
   fake-psp:
     <<: *app
@@ -93,7 +113,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:4-management
-    ports: ["${RABBITMQ_UI_PORT:-15672}:15672"]
+    ports: ["${RABBITMQ_UI_PORT:-15672}:15672", "${RABBITMQ_HOST_PORT:-56730}:5672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s

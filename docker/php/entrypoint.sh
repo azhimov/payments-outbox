@@ -10,6 +10,8 @@ fi
 # Only the api container migrates; relay and consumers wait for it (see compose healthchecks).
 if [ "$RUN_MIGRATIONS" = "1" ]; then
     php artisan migrate --force --no-interaction
+    # The fictional Demo Store merchant (idempotent).
+    php artisan db:seed --force --no-interaction
 fi
 
 exec "$@"
