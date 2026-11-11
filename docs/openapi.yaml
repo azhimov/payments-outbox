@@ -5,6 +5,11 @@ info:
   description: |
     Demo payments API of the fictional "Demo Store". Shows azhimov/laravel-idempotency
     and azhimov/laravel-outbox together. Amounts are integers in minor units (tiyn), currency KZT.
+
+    Any endpoint can also answer 502 api_unreachable or 504 api_timeout. Those come from the
+    nginx gateway when php-fpm cannot be reached or does not answer in time (the api is
+    restarting, crashed or overloaded), in the same error format. The request may or may not
+    have run: retry a payment or a refund with the same Idempotency-Key.
   license:
     name: MIT
     identifier: MIT
@@ -75,6 +80,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '422': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/GatewayError' }
+        '504': { $ref: '#/components/responses/GatewayError' }
 
   /api/payments/{payment}:
     get:
@@ -116,6 +123,8 @@ paths:
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/GatewayError' }
+        '504': { $ref: '#/components/responses/GatewayError' }
 
   /api/webhooks/psp:
     post:
@@ -198,6 +207,13 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    GatewayError:
+      description: From the nginx gateway, not the app (api_unreachable, api_timeout). The request may or may not have run; retry with the same Idempotency-Key.
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
 
   schemas:
     CreateOrder:
@@ -255,6 +271,6 @@ components:
           type: object
           required: [code, message]
           properties:
-            code: { type: string, examples: [validation_failed, not_found, unauthenticated, idempotency_key_reused, idempotency_request_in_progress, order_already_paid, payment_in_progress, refund_not_allowed, invalid_payment_state, psp_unavailable, invalid_signature] }
+            code: { type: string, examples: [validation_failed, not_found, unauthenticated, idempotency_key_reused, idempotency_request_in_progress, order_already_paid, payment_in_progress, refund_not_allowed, invalid_payment_state, psp_unavailable, invalid_signature, api_unreachable, api_timeout] }
             message: { type: string }
             details: { type: object }
