@@ -9,3 +9,8 @@ parameters:
         - config
         - database
         - routes
+        - tools
+
+rules:
+    # App\Domain stays plain PHP: no Laravel, no Carbon, no outer layers.
+    - Tools\PhpStan\DomainIsolationRule
