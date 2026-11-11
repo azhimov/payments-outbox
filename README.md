@@ -176,14 +176,9 @@ Possible, but absent from this run:
 
 458 orders paid, 42 declined or failed (declines plus 503s the PSP never charged), and **0 double charges, 0 lost events**. The report is written to `storage/chaos/report.json`.
 
-![Grafana dashboard "Payments" during a 500-order make chaos run](docs/grafana.png)
+![Grafana dashboard "Payments" during the make chaos run above](docs/grafana.png)
 
-The Grafana dashboard "Payments" during an earlier 500-order run:
-- **Outbox lag.** The hump is the relay kill. Both relay workers are killed and RabbitMQ restarts, so the oldest undelivered event ages to about 27 s. Once the relay is back it drains the backlog, and the lag returns to 0 within seconds and stays there.
-- **Outbox messages.** Nothing ends up `failed`.
-- **API errors (5xx).** Only the 503s injected at the fake PSP show up here.
-- **Inbox duplicates skipped.** Redeliveries the ledger ignored.
-- **Ledger balance.** `merchant_payable` and `psp_clearing` mirror each other.
+*Chaos run: 500 orders, 1 159 payment requests with retries, 10% PSP timeouts + 5% 503, relay killed and RabbitMQ restarted. Outbox lag spikes to ~13 s while the relay is down and drops back to 0; ~500 events published, none failed. The 5 s p95 on /psp/payments is the fake PSP's injected timeouts. Ledger Σ stays at 0 and the inbox skipped 6 duplicate PSP webhooks.*
 
 ## Why it's built this way
 
@@ -222,6 +217,10 @@ The suite covers the following:
 - `demo:verify` against each kind of violation.
 
 CI also runs the 50-order chaos run.
+
+## Roadmap
+
+- **v0.2: operator back office on Filament.** A panel for support and finance to browse orders, payments, refunds and ledger transactions.
 
 ## Built with
 
