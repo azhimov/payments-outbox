@@ -6,6 +6,7 @@ namespace App\Infrastructure\Messaging;
 
 use App\Application\Ledger\IncomingEvent;
 use App\Application\Ledger\RecordLedgerEntries;
+use App\Infrastructure\Metrics\Metrics;
 use Azhimov\Outbox\Transports\RabbitMqTransport;
 use Closure;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -23,6 +24,7 @@ final readonly class LedgerConsumer
         private RabbitMqConnector $connector,
         private RecordLedgerEntries $record,
         private LoggerInterface $logger,
+        private Metrics $metrics,
     ) {}
 
     /**
@@ -61,10 +63,12 @@ final readonly class LedgerConsumer
             $received = RabbitMqTransport::receive($message);
             $outcome = $this->record->handle(new IncomingEvent($received->id, $received->type, $received->payload));
             $message->ack();
+            $this->metrics->ledger($outcome->value);
 
             $this->logger->info('ledger: '.$outcome->value, ['message_id' => $received->id, 'type' => $received->type]);
         } catch (Throwable $e) {
             $message->nack(false);
+            $this->metrics->ledger('dead_lettered');
             $this->logger->error('ledger: dead-lettered', ['error' => $e->getMessage(), 'routing_key' => $message->getRoutingKey()]);
         }
     }

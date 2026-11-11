@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # Every PHP process (api, relay, ledger, scheduler) writes to the same Redis-backed
+  # registry, so one scrape of the API sees all of them.
+  - job_name: payments
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['web:80']

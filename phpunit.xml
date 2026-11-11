@@ -30,6 +30,7 @@
         <ini name="memory_limit" value="1G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="FAKE_PSP_ENABLED" value="true"/>
+        <env name="METRICS_STORAGE" value="memory"/>
         <env name="FAKE_PSP_LATENCY_MS" value="0"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
