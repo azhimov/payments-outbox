@@ -120,6 +120,15 @@ services:
       api:
         condition: service_healthy
 
+  # API docs from docs/openapi.yaml.
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.27.1
+    environment:
+      SWAGGER_JSON: /docs/openapi.yaml
+    volumes:
+      - ./docs/openapi.yaml:/docs/openapi.yaml:ro
+    ports: ["${SWAGGER_PORT:-8082}:8080"]
+
   prometheus:
     image: prom/prometheus:v3.5.0
     volumes:
