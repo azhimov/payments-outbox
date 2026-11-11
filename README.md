@@ -129,15 +129,30 @@ The run goes like this:
 3. Mid-run it **kills both relay workers** and **restarts RabbitMQ**, then brings the relay back.
 4. `demo:verify` waits until nothing is processing and the outbox is drained, then reconciles three sources of truth: our payments, the **PSP's own charges** and the **ledger**.
 
-Result of a full run on a laptop (`make chaos`, 2026-11-11):
+Result of a full run on a laptop (`make chaos`, 2026-11-12):
 
 | Input | |
 |---|---|
 | Orders | 500 |
-| Payment requests (1–3 per order, same key, partly parallel, retries) | 1 122 |
+| Payment requests (1–3 per order, same key, partly parallel, retries) | 1 159 |
 | Refund requests (with repeats) | 59 |
-| Answers | 1 401 × 201, 168 × 202 (processing), 112 × 409 (concurrent retry in progress) |
+| Answers | 1 382 × 201, 199 × 202, 137 × 409 |
 | Failures injected | PSP: 10% timeouts, 5% 503; relay killed 1 time; RabbitMQ restarted 1 time |
+
+Every request got one of three answers:
+
+| Code | When | What the client does |
+|---|---|---|
+| `201` | The order was created (500 of them), or the payment or refund reached a final status: succeeded, declined, failed. A repeat with the same key gets the stored `201` again (`Idempotent-Replayed: true`). | Nothing: the answer is final. |
+| `202` | The PSP timed out, answered 503 or said `pending`. The outcome is unknown, so the payment stays `processing` until the webhook or `payments:reconcile` settles it. A repeat with the same key gets the stored `202`. | Reads `GET /api/payments/{id}` later. |
+| `409` | `idempotency_request_in_progress`: a parallel repeat with the same key arrived while the first request was still running. | Retries after `Retry-After` with the same key. |
+
+Possible, but absent from this run:
+
+| Code | When | What the client does |
+|---|---|---|
+| `503` | `psp_unavailable` on a refund when the PSP answer was unclear. Not stored under the key; `refunds:reconcile` finishes the refund. | Retries with the same key. |
+| `502` / `504` | `api_unreachable` / `api_timeout` from nginx when php-fpm is gone or silent: the api is restarting, crashed or overloaded. These come in the same JSON error format. The request may or may not have run. | Retries with the same key. |
 
 | Check (`demo:verify`) | Result |
 |---|---|
@@ -145,13 +160,23 @@ Result of a full run on a laptop (`make chaos`, 2026-11-11):
 | Orders charged more than once **at the PSP** | **0** |
 | PSP charges not captured in payments (money taken, we don't know) | **0** |
 | Payments still processing after settling | 0 |
+| Refunds still processing after settling | 0 |
 | Outbox messages not delivered | 0 |
-| Captured payments booked in the ledger | 447 of 447 |
+| Captured payments booked in the ledger | 458 of 458 |
 | Refunds booked in the ledger | 39 of 39 |
 | Unbalanced ledger transactions | 0 |
-| Merchant payable = paid − refunded | 215 252.50 KZT = 215 252.50 KZT |
+| Merchant payable = paid − refunded | 232 320.50 KZT = 232 320.50 KZT |
 
-447 orders paid, 53 declined or failed (declines plus 503s the PSP never charged), and **0 double charges, 0 lost events**. The report is written to `storage/chaos/report.json`.
+458 orders paid, 42 declined or failed (declines plus 503s the PSP never charged), and **0 double charges, 0 lost events**. The report is written to `storage/chaos/report.json`.
+
+![Grafana dashboard "Payments" during a 500-order make chaos run](docs/grafana.png)
+
+The Grafana dashboard "Payments" during an earlier 500-order run:
+- **Outbox lag.** The hump is the relay kill. Both relay workers are killed and RabbitMQ restarts, so the oldest undelivered event ages to about 27 s. Once the relay is back it drains the backlog, and the lag returns to 0 within seconds and stays there.
+- **Outbox messages.** Nothing ends up `failed`.
+- **API errors (5xx).** Only the 503s injected at the fake PSP show up here.
+- **Inbox duplicates skipped.** Redeliveries the ledger ignored.
+- **Ledger balance.** `merchant_payable` and `psp_clearing` mirror each other.
 
 ## Why it's built this way
 

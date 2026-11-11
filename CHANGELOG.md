@@ -15,4 +15,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Fake PSP with deterministic tokens, random failure rates, late answers and duplicate webhooks.
 - Prometheus metrics and a provisioned Grafana dashboard; OpenAPI 3.1 with Swagger UI.
 - `make chaos` (`demo:load` + `demo:verify`) and a chaos-smoke CI job.
+- nginx answers 502 `api_unreachable` / 504 `api_timeout` in the API's JSON error format when php-fpm cannot be reached, documented in OpenAPI.
 - docker compose: api, nginx, fake-psp, relay ×2, ledger, scheduler, PostgreSQL 17, Redis 7, RabbitMQ 4, Prometheus, Grafana, Swagger UI.
