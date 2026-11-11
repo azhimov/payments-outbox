@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Infrastructure\Persistence\Models\MerchantModel;
 use Illuminate\Database\Seeder;
 
 final class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * The fictional "Demo Store" merchant (key: config demo.api_key, env DEMO_API_KEY).
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $key = config('demo.api_key');
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        MerchantModel::query()->updateOrCreate(
+            ['id' => '01970000-0000-7000-8000-000000000001'],
+            ['name' => 'Demo Store', 'api_key_hash' => hash('sha256', is_string($key) ? $key : 'demo-store-key')],
+        );
     }
 }
