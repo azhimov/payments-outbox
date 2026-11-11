@@ -21,6 +21,8 @@ ORDERS ?= 500
 KILL_AFTER ?= 20
 CHAOS_ENV = FAKE_PSP_TIMEOUT_RATE=0.10 FAKE_PSP_ERROR_RATE=0.05 PSP_RECONCILE_AFTER=10
 
+# The relay comes back with `start`, not `up`: `up` re-converges its dependencies and can
+# recreate the api container mid-load, which shows up as 502s that are not part of the test.
 chaos: ## Prove it: retried payments, PSP timeouts and 5xx, the relay killed, RabbitMQ restarted, then reconcile
 	mkdir -p storage/chaos
 	docker compose down --remove-orphans
@@ -29,6 +31,6 @@ chaos: ## Prove it: retried payments, PSP timeouts and 5xx, the relay killed, Ra
 	docker compose run --rm -T cli php artisan demo:load --orders=$(ORDERS) & LOAD=$$!; \
 	sleep $(KILL_AFTER); echo ">> chaos: kill the relay"; docker compose kill relay; \
 	sleep 10; echo ">> chaos: restart RabbitMQ"; docker compose restart rabbitmq; \
-	sleep 10; echo ">> chaos: relay back"; $(CHAOS_ENV) docker compose up -d relay; \
+	sleep 10; echo ">> chaos: relay back"; docker compose start relay; \
 	wait $$LOAD
 	docker compose run --rm -T cli php artisan demo:verify --wait=300 --report=storage/chaos/report.json
