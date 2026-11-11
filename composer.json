@@ -14,7 +14,7 @@
     "require": {
         "php": "^8.4",
         "azhimov/laravel-idempotency": "^0.1",
-        "azhimov/laravel-outbox": "^0.1",
+        "azhimov/laravel-outbox": "^0.2",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "php-amqplib/php-amqplib": "^3.7",

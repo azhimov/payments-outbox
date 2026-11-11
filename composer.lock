@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "95b3730f9240a89ae68cf7ac0a45619a",
+    "content-hash": "fd154c4c0e21b5fa1135670a8adaa73f",
     "packages": [
         {
             "name": "azhimov/laravel-idempotency",
@@ -75,16 +75,16 @@
         },
         {
             "name": "azhimov/laravel-outbox",
-            "version": "v0.1.0",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/azhimov/laravel-outbox.git",
-                "reference": "23128179bc223b3b03d83c61f7b3ced24b650332"
+                "reference": "d3517031afbfeee068203fcf4df0274fc3cee74c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/azhimov/laravel-outbox/zipball/23128179bc223b3b03d83c61f7b3ced24b650332",
-                "reference": "23128179bc223b3b03d83c61f7b3ced24b650332",
+                "url": "https://api.github.com/repos/azhimov/laravel-outbox/zipball/d3517031afbfeee068203fcf4df0274fc3cee74c",
+                "reference": "d3517031afbfeee068203fcf4df0274fc3cee74c",
                 "shasum": ""
             },
             "require": {
@@ -148,9 +148,9 @@
             ],
             "support": {
                 "issues": "https://github.com/azhimov/laravel-outbox/issues",
-                "source": "https://github.com/azhimov/laravel-outbox/tree/v0.1.0"
+                "source": "https://github.com/azhimov/laravel-outbox/tree/v0.2.0"
             },
-            "time": "2026-11-11T13:42:13+00:00"
+            "time": "2026-11-11T15:22:01+00:00"
         },
         {
             "name": "brick/math",
