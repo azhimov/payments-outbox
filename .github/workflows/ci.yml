@@ -107,3 +107,21 @@ jobs:
 
       - name: Build the app image
         run: docker compose build api
+
+  chaos-smoke:
+    name: Chaos smoke (50 orders, relay killed, RabbitMQ restarted)
+    runs-on: ubuntu-latest
+    needs: [docker]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: make chaos
+        run: make chaos ORDERS=50 KILL_AFTER=8
+
+      - name: Chaos report
+        if: always()
+        run: cat storage/chaos/report.json || true
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail=200 api relay ledger scheduler fake-psp

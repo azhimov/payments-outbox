@@ -10,6 +10,7 @@ RUN apk add --no-cache postgresql-libs \
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php/zz-fpm.conf /usr/local/etc/php-fpm.d/zz-fpm.conf
 
 WORKDIR /app
 

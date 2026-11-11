@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         },
     )
-    ->withCommands([__DIR__.'/../app/Presentation/Console', __DIR__.'/../app/FakePsp'])
+    ->withCommands([__DIR__.'/../app/Presentation/Console', __DIR__.'/../app/Presentation/Console/Demo', __DIR__.'/../app/FakePsp'])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [RecordHttpMetrics::class]);
     })

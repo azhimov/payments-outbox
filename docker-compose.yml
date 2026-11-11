@@ -54,6 +54,7 @@ services:
   # keep each order's events in order (laravel-outbox SKIP LOCKED + per-aggregate order).
   relay:
     <<: *app
+    restart: unless-stopped
     command: ["php", "artisan", "outbox:relay"]
     deploy:
       replicas: 2
@@ -67,6 +68,7 @@ services:
   # Books payment events from RabbitMQ into the double-entry ledger, through the inbox.
   ledger:
     <<: *app
+    restart: unless-stopped
     command: ["php", "artisan", "ledger:consume"]
     stop_grace_period: 30s
     depends_on:
@@ -78,7 +80,11 @@ services:
   # Laravel scheduler: payments:reconcile every minute.
   scheduler:
     <<: *app
+    restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
+    environment:
+      <<: *app-env
+      PSP_RECONCILE_AFTER: "${PSP_RECONCILE_AFTER:-60}"
     depends_on:
       api:
         condition: service_healthy
@@ -86,6 +92,7 @@ services:
   # The fake PSP's webhook sender (settles pending charges, sometimes sends twice).
   fake-psp-webhooks:
     <<: *app
+    restart: unless-stopped
     command: ["php", "artisan", "psp:deliver-webhooks"]
     environment:
       <<: *app-env
@@ -93,6 +100,15 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  # One-off tools: docker compose run --rm cli php artisan demo:load | demo:verify
+  cli:
+    <<: *app
+    profiles: ["tools"]
+    restart: "no"
+    command: ["php", "artisan", "list"]
+    volumes:
+      - ./storage/chaos:/app/storage/chaos
 
   # The pretend acquirer: same image, its own routes (/psp/*) and outcomes set by env.
   fake-psp:
@@ -104,8 +120,9 @@ services:
       PHP_CLI_SERVER_WORKERS: "8"
       FAKE_PSP_DECLINE_RATE: "0.05"
       FAKE_PSP_PENDING_RATE: "0.05"
-      FAKE_PSP_TIMEOUT_RATE: "0"
-      FAKE_PSP_ERROR_RATE: "0"
+      # make chaos raises these: 10% timeouts (charged, answered late), 5% 503 (not charged).
+      FAKE_PSP_TIMEOUT_RATE: "${FAKE_PSP_TIMEOUT_RATE:-0}"
+      FAKE_PSP_ERROR_RATE: "${FAKE_PSP_ERROR_RATE:-0}"
     depends_on:
       api:
         condition: service_healthy
