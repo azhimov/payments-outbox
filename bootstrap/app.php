@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Presentation\Http\Controllers\MetricsController;
 use App\Presentation\Http\ExceptionRenderer;
 use App\Presentation\Http\Middleware\RecordHttpMetrics;
 use Illuminate\Foundation\Application;
@@ -17,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function (): void {
+            // Prometheus needs no session, cookies or CSRF: keep /metrics out of the web group.
+            Route::get('/metrics', MetricsController::class);
+
             if (config('fake_psp.enabled') === true) {
                 Route::middleware('api')->group(base_path('routes/fake-psp.php'));
             }

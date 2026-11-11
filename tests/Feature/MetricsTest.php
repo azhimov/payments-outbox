@@ -82,3 +82,11 @@ it('counts inbox duplicates and ledger outcomes', function (): void {
     expect(scrape())->toContain('payments_ledger_messages_total{outcome="posted"} 1')
         ->toContain('payments_inbox_duplicates_total{consumer="ledger"} 1');
 });
+
+it('serves metrics without sessions or cookies, so it needs no APP_KEY', function (): void {
+    config(['app.key' => null]);
+
+    $response = test()->get('/metrics')->assertOk();
+
+    expect($response->headers->getCookies())->toBe([]);
+});
