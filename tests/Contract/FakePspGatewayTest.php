@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Application\Ports\ChargeOutcome;
 use App\Application\Ports\ChargeRequest;
 use App\Application\Ports\ChargeResult;
+use App\Application\Ports\RefundRequest;
 use App\Domain\Shared\Currency;
 use App\Domain\Shared\Money;
 use App\Infrastructure\Psp\HttpPaymentGateway;
@@ -120,4 +121,19 @@ it('reports an unreachable PSP as unknown', function (): void {
 
     expect($gateway->charge(new ChargeRequest((string) Str::uuid7(), Money::of(1, Currency::KZT()), 'tok_success'))->outcome)
         ->toBe(ChargeOutcome::Unknown);
+});
+
+it('refunds through the PSP once per refund id and maps a refusal to declined', function (): void {
+    $paymentId = (string) Str::uuid7();
+    chargeWith('tok_success', $paymentId);
+    $request = fn (string $refundId, int $amount) => new RefundRequest($refundId, $paymentId, Money::of($amount, Currency::KZT()));
+
+    $first = $this->gateway->refund($request('rf-'.$paymentId, 100_000));
+    $retry = $this->gateway->refund($request('rf-'.$paymentId, 100_000));
+    $tooMuch = $this->gateway->refund($request('rf2-'.$paymentId, 500_000));
+
+    expect($first->outcome)->toBe(ChargeOutcome::Succeeded)
+        ->and($retry->outcome)->toBe(ChargeOutcome::Succeeded)
+        ->and($tooMuch->outcome)->toBe(ChargeOutcome::Declined)
+        ->and($tooMuch->reason)->toBe('refund_exceeds_capture');
 });

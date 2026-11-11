@@ -98,3 +98,15 @@ it('succeeds tok_visa when no failure is drawn', function (): void {
 
     pspCharge('tok_visa')->assertCreated()->assertJsonPath('status', 'succeeded');
 });
+
+it('refunds a captured charge once per refund key, up to the captured amount', function (): void {
+    $paymentId = (string) Str::uuid7();
+    pspCharge('tok_success', $paymentId, 1_000);
+
+    $first = $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 600], ['Idempotency-Key' => 'rf-1'])->assertCreated();
+    $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 600], ['Idempotency-Key' => 'rf-1'])->assertOk()->assertJsonPath('id', $first->json('id'));
+    $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 401], ['Idempotency-Key' => 'rf-2'])->assertUnprocessable();
+    $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 400], ['Idempotency-Key' => 'rf-3'])->assertCreated();
+    $this->postJson('/psp/payments/'.Str::uuid7().'/refunds', ['amount' => 1], ['Idempotency-Key' => 'rf-4'])->assertNotFound();
+    $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 1])->assertStatus(400);
+});

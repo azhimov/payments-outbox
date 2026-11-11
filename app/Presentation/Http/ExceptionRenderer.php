@@ -7,6 +7,8 @@ namespace App\Presentation\Http;
 use App\Application\Payments\Exceptions\OrderAlreadyPaid;
 use App\Application\Payments\Exceptions\OrderNotFound;
 use App\Application\Payments\Exceptions\PaymentAlreadyInProgress;
+use App\Application\Refunds\Exceptions\PaymentNotFound;
+use App\Application\Refunds\Exceptions\PspUnavailable;
 use App\Domain\Order\Exceptions\InvalidOrder;
 use App\Domain\Payment\Exceptions\InvalidPaymentTransition;
 use App\Domain\Payment\Exceptions\RefundNotAllowed;
@@ -39,6 +41,15 @@ final class ExceptionRenderer
 
         $exceptions->render(fn (PaymentAlreadyInProgress $e, Request $request) => $api($request)
             ? ApiError::response(409, 'payment_in_progress', 'The order already has a payment that is processing or succeeded.')
+            : null);
+
+        $exceptions->render(fn (PaymentNotFound $e, Request $request) => $api($request)
+            ? ApiError::response(404, 'not_found', 'Payment not found.')
+            : null);
+
+        // 5xx: not stored by laravel-idempotency, so a retry with the same key runs again.
+        $exceptions->render(fn (PspUnavailable $e, Request $request) => $api($request)
+            ? ApiError::response(503, 'psp_unavailable', $e->getMessage())->header('Retry-After', '2')
             : null);
 
         $exceptions->render(fn (InvalidOrder $e, Request $request) => $api($request)

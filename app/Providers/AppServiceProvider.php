@@ -14,10 +14,12 @@ use App\Application\Ports\MerchantDirectory;
 use App\Application\Ports\OrderRepository;
 use App\Application\Ports\PaymentGateway;
 use App\Application\Ports\PaymentRepository;
+use App\Application\Ports\RefundRepository;
 use App\Application\Ports\TransactionRunner;
 use App\Infrastructure\Messaging\InboxDeduplicator;
 use App\Infrastructure\Messaging\OutboxIntegrationEvents;
 use App\Infrastructure\Persistence\DatabaseLedgerRepository;
+use App\Infrastructure\Persistence\DatabaseRefundRepository;
 use App\Infrastructure\Persistence\EloquentMerchantDirectory;
 use App\Infrastructure\Persistence\EloquentOrderRepository;
 use App\Infrastructure\Persistence\EloquentPaymentRepository;
@@ -42,6 +44,7 @@ final class AppServiceProvider extends ServiceProvider
         Deduplicator::class => InboxDeduplicator::class,
         Clock::class => SystemClock::class,
         LedgerRepository::class => DatabaseLedgerRepository::class,
+        RefundRepository::class => DatabaseRefundRepository::class,
     ];
 
     public function register(): void

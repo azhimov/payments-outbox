@@ -8,6 +8,7 @@ use App\Application\Ports\ChargeOutcome;
 use App\Application\Ports\ChargeRequest;
 use App\Application\Ports\ChargeResult;
 use App\Application\Ports\PaymentGateway;
+use App\Application\Ports\RefundRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Http\Client\PendingRequest;
@@ -43,6 +44,15 @@ final readonly class HttpPaymentGateway implements PaymentGateway
         return $this->call(fn (PendingRequest $http): Response => $http->get('/psp/payments/'.rawurlencode($paymentId)));
     }
 
+    public function refund(RefundRequest $request): ChargeResult
+    {
+        return $this->call(fn (PendingRequest $http): Response => $http
+            ->withHeaders(['Idempotency-Key' => $request->refundId])
+            ->post('/psp/payments/'.rawurlencode($request->paymentId).'/refunds', [
+                'amount' => $request->amount->amount,
+            ]));
+    }
+
     /**
      * @param  callable(PendingRequest): Response  $send
      */
@@ -56,6 +66,13 @@ final readonly class HttpPaymentGateway implements PaymentGateway
 
         if ($response->status() === 404) {
             return new ChargeResult(ChargeOutcome::NotFound);
+        }
+
+        // A clear refusal (e.g. refund above the captured amount), not a guess.
+        if ($response->status() === 422) {
+            $error = $response->json('error');
+
+            return new ChargeResult(ChargeOutcome::Declined, reason: is_string($error) ? $error : 'refused');
         }
 
         if (! $response->successful()) {

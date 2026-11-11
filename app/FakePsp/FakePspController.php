@@ -61,6 +61,46 @@ final class FakePspController
         return new JsonResponse($charge->toApi(), 201);
     }
 
+    /**
+     * Refunds a captured charge, once per Idempotency-Key (the merchant's refund id).
+     */
+    public function refund(Request $request, string $paymentId): JsonResponse
+    {
+        $refundId = $request->header('Idempotency-Key');
+        $request->validate(['amount' => ['required', 'integer', 'min:1']]);
+        $amount = $request->integer('amount');
+
+        if (! is_string($refundId) || $refundId === '') {
+            return new JsonResponse(['error' => 'Idempotency-Key header is required'], 400);
+        }
+
+        $existing = FakePspRefund::query()->where('refund_id', $refundId)->first();
+        if ($existing !== null) {
+            return new JsonResponse($existing->toApi());
+        }
+
+        $charge = FakePspCharge::query()->where('payment_id', $paymentId)->where('status', 'succeeded')->first();
+        if ($charge === null) {
+            return new JsonResponse(['error' => 'Unknown payment'], 404);
+        }
+
+        $refunded = FakePspRefund::query()->where('payment_id', $paymentId)->sum('amount');
+        if ($amount > $charge->amount - (int) $refunded) {
+            return new JsonResponse(['error' => 'refund_exceeds_capture'], 422);
+        }
+
+        FakePspRefund::query()->insertOrIgnore([
+            'id' => 'rfd_'.Str::lower(Str::random(24)),
+            'refund_id' => $refundId,
+            'payment_id' => $paymentId,
+            'amount' => $amount,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return new JsonResponse(FakePspRefund::query()->where('refund_id', $refundId)->firstOrFail()->toApi(), 201);
+    }
+
     public function show(string $paymentId): JsonResponse
     {
         $charge = FakePspCharge::query()->where('payment_id', $paymentId)->first();

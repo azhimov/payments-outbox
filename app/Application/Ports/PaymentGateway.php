@@ -11,4 +11,7 @@ interface PaymentGateway
 
     /** What the PSP knows about our payment id (used by reconcile). */
     public function status(string $paymentId): ChargeResult;
+
+    /** Succeeded, Declined (refused by the PSP) or Unknown; never throws for PSP trouble. */
+    public function refund(RefundRequest $request): ChargeResult;
 }

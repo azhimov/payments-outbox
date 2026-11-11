@@ -9,4 +9,5 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('psp')->group(function (): void {
     Route::post('/payments', [FakePspController::class, 'charge']);
     Route::get('/payments/{paymentId}', [FakePspController::class, 'show']);
+    Route::post('/payments/{paymentId}/refunds', [FakePspController::class, 'refund']);
 });
