@@ -73,9 +73,16 @@ If the PSP times out, the outcome is unknown. The payment stays `processing`, th
 docker compose up --build -d --wait     # api, nginx, fake-psp, relay x2, ledger, scheduler, postgres, redis, rabbitmq, prometheus, grafana, swagger-ui
 ```
 
+Port 8080 taken? Pick another one; the commands below and `make` follow `APP_PORT`:
+
+```bash
+export APP_PORT=18080
+docker compose up --build -d --wait
+```
+
 | | |
 |---|---|
-| API | http://localhost:8080 (`APP_PORT` to change); demo key `demo-store-key` |
+| API | http://localhost:8080, or your `APP_PORT`; demo key `demo-store-key` |
 | Swagger UI | http://localhost:8082 (OpenAPI 3.1 in [docs/openapi.yaml](docs/openapi.yaml)) |
 | Grafana | http://localhost:3000, dashboard "Payments" |
 | RabbitMQ | http://localhost:15672 (guest / guest) |
@@ -84,14 +91,14 @@ docker compose up --build -d --wait     # api, nginx, fake-psp, relay x2, ledger
 Create an order and pay it twice with the same key:
 
 ```bash
-curl -s -X POST localhost:8080/api/orders -H 'X-Api-Key: demo-store-key' -H 'Content-Type: application/json' \
+curl -s -X POST localhost:${APP_PORT:-8080}/api/orders -H 'X-Api-Key: demo-store-key' -H 'Content-Type: application/json' \
   -d '{"currency":"KZT","items":[{"sku":"SKU-TEA","name":"Green tea","quantity":2,"unit_price":150000}]}'
 ```
 ```json
 {"data":{"id":"01a1cb2c-e399-732a-9365-3566ade3962a","status":"pending","currency":"KZT","total_amount":300000,"items":[{"sku":"SKU-TEA","name":"Green tea","quantity":2,"unit_price":150000}]}}
 ```
 ```bash
-curl -i -X POST localhost:8080/api/orders/01a1cb2c-e399-732a-9365-3566ade3962a/payments \
+curl -i -X POST localhost:${APP_PORT:-8080}/api/orders/01a1cb2c-e399-732a-9365-3566ade3962a/payments \
   -H 'X-Api-Key: demo-store-key' -H 'Content-Type: application/json' -H 'Idempotency-Key: demo-key-1' \
   -d '{"card_token":"tok_success"}'
 ```
