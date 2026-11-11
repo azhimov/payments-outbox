@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Application\Refunds;
 
 use App\Application\Ports\ChargeOutcome;
-use App\Application\Ports\IntegrationEvent;
-use App\Application\Ports\IntegrationEvents;
 use App\Application\Ports\PaymentGateway;
 use App\Application\Ports\PaymentRepository;
 use App\Application\Ports\RefundRepository;
@@ -24,9 +22,9 @@ use App\Domain\Shared\Money;
  * 1. tx1: lock the payment, check the amount against what is left minus refunds already
  *    in flight, reserve it as a processing refund (or reuse the row of a retried request);
  * 2. refund at the PSP, outside a transaction, keyed by the refund id;
- * 3. tx2: apply it to the payment, mark the refund, publish payment.refunded (outbox).
- * An unclear PSP answer is a 503: the client retries with the same key, gets the same
- * refund id, and the PSP does not refund twice.
+ * 3. tx2: RefundOutcomes applies it (payment, refund, payment.refunded in one transaction).
+ * An unclear PSP answer is a 503: a retry with the same key gets the same refund id, so the
+ * PSP refunds once; refunds:reconcile finishes refunds nobody retries.
  */
 final readonly class RefundPayment
 {
@@ -34,7 +32,7 @@ final readonly class RefundPayment
         private PaymentRepository $payments,
         private RefundRepository $refunds,
         private PaymentGateway $gateway,
-        private IntegrationEvents $events,
+        private RefundOutcomes $outcomes,
         private TransactionRunner $transaction,
     ) {}
 
@@ -51,43 +49,12 @@ final readonly class RefundPayment
         $result = $this->gateway->refund(new RefundRequest($command->refundId, $payment->id, $amount));
 
         if ($result->outcome === ChargeOutcome::Unknown) {
+            // Not stored by laravel-idempotency (5xx): a retry with the same key runs again,
+            // and refunds:reconcile finishes it if the client never comes back.
             throw new PspUnavailable('The PSP did not answer the refund clearly.');
         }
 
-        return $this->transaction->run(function () use ($command, $amount, $result): RefundView {
-            $payment = $this->payments->findForUpdate($command->paymentId) ?? throw new PaymentNotFound;
-
-            if ($this->refunds->status($command->refundId) !== 'processing') {
-                return new RefundView($command->refundId, (string) $this->refunds->status($command->refundId), $command->amount, $payment);
-            }
-
-            if ($result->outcome !== ChargeOutcome::Succeeded) {
-                $this->refunds->markFailed($command->refundId);
-
-                return new RefundView($command->refundId, 'failed', $command->amount, $payment);
-            }
-
-            $refund = $payment->refund($command->refundId, $amount);
-            $this->payments->save($payment);
-            $this->refunds->markSucceeded($command->refundId);
-
-            $this->events->publish(new IntegrationEvent(
-                topic: 'payments',
-                type: 'payment.refunded',
-                payload: [
-                    'refund_id' => $refund->id,
-                    'payment_id' => $payment->id,
-                    'order_id' => $payment->orderId,
-                    'merchant_id' => $payment->merchantId,
-                    'amount' => $refund->amount->amount,
-                    'currency' => $refund->amount->currency->code,
-                ],
-                // Same aggregate as payment.succeeded: consumers get them in order.
-                aggregateId: $payment->orderId,
-            ));
-
-            return new RefundView($refund->id, 'succeeded', $refund->amount->amount, $payment);
-        });
+        return $this->outcomes->apply($command->refundId, $result);
     }
 
     private function reserve(RefundPaymentCommand $command): Payment

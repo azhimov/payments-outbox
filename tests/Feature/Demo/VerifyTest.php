@@ -91,6 +91,6 @@ it('waits for the system to settle before checking', function (): void {
     DB::table('outbox_messages')->update(['status' => 'pending']);
 
     $this->artisan('demo:verify', ['--wait' => 1])
-        ->expectsOutputToContain('settling: 0 payment(s) processing, 1 event(s) undelivered')
+        ->expectsOutputToContain('settling: 0 payment(s) or refund(s) processing, 1 event(s) undelivered')
         ->assertFailed();
 });

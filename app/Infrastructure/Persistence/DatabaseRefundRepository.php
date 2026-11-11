@@ -29,6 +29,25 @@ final class DatabaseRefundRepository implements RefundRepository
         return is_numeric($amount) ? (int) $amount : null;
     }
 
+    public function paymentId(string $refundId): ?string
+    {
+        $id = $this->table()->where('id', $refundId)->value('payment_id');
+
+        return is_string($id) ? $id : null;
+    }
+
+    public function processingSince(\DateTimeImmutable $before, int $limit): array
+    {
+        return array_values($this->table()
+            ->where('status', 'processing')
+            ->where('updated_at', '<', $before)
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id))
+            ->all());
+    }
+
     public function reserved(string $paymentId): int
     {
         $sum = $this->table()->where('payment_id', $paymentId)->where('status', 'processing')->sum('amount');

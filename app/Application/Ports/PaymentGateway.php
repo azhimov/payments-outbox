@@ -14,4 +14,7 @@ interface PaymentGateway
 
     /** Succeeded, Declined (refused by the PSP) or Unknown; never throws for PSP trouble. */
     public function refund(RefundRequest $request): ChargeResult;
+
+    /** What the PSP knows about our refund id: Succeeded, NotFound (never refunded) or Unknown. */
+    public function refundStatus(string $refundId): ChargeResult;
 }

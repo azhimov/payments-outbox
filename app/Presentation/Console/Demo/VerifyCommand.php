@@ -51,7 +51,8 @@ final class VerifyCommand extends Command
         $deadline = time() + $seconds;
 
         while (time() < $deadline) {
-            $processing = DB::table('payments')->where('status', 'processing')->count();
+            $processing = DB::table('payments')->where('status', 'processing')->count()
+                + DB::table('refunds')->where('status', 'processing')->count();
             $undelivered = DB::table('outbox_messages')->where('status', '!=', 'published')->count();
             $unbooked = DB::table('payments')->whereIn('status', ['succeeded', 'partially_refunded', 'refunded'])->count()
                 - (int) DB::table('ledger_entries')->where('event_type', 'payment.succeeded')->distinct()->count('transaction_id');
@@ -60,7 +61,7 @@ final class VerifyCommand extends Command
                 return;
             }
 
-            $this->line("settling: {$processing} payment(s) processing, {$undelivered} event(s) undelivered, {$unbooked} capture(s) not booked yet");
+            $this->line("settling: {$processing} payment(s) or refund(s) processing, {$undelivered} event(s) undelivered, {$unbooked} capture(s) not booked yet");
             sleep(5);
         }
     }

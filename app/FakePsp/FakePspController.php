@@ -101,6 +101,15 @@ final class FakePspController
         return new JsonResponse(FakePspRefund::query()->where('refund_id', $refundId)->firstOrFail()->toApi(), 201);
     }
 
+    public function refundStatus(string $refundId): JsonResponse
+    {
+        $refund = FakePspRefund::query()->where('refund_id', $refundId)->first();
+
+        return $refund === null
+            ? new JsonResponse(['error' => 'Unknown refund'], 404)
+            : new JsonResponse($refund->toApi());
+    }
+
     public function show(string $paymentId): JsonResponse
     {
         $charge = FakePspCharge::query()->where('payment_id', $paymentId)->first();

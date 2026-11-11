@@ -26,7 +26,7 @@ flowchart LR
     relay -->|CloudEvents| mq[[RabbitMQ<br/>exchange payments]]
     mq --> ledger[ledger:consume<br/>inbox]
     ledger -->|double entry| pg
-    sched[scheduler<br/>payments:reconcile] -->|status of stuck payments| psp
+    sched[scheduler<br/>payments:reconcile<br/>refunds:reconcile] -->|status of stuck payments and refunds| psp
     api & relay & ledger -.->|metrics| prom[Prometheus] --> graf[Grafana]
 ```
 
@@ -165,9 +165,9 @@ Result of a full run on a laptop (`make chaos`, 2026-11-11):
 
 ## Limitations
 
-- **Stuck payments are closed by reconcile**, every minute, for payments processing longer than `PSP_RECONCILE_AFTER` (60 s). Until then the client sees `202` / `processing`.
+- **Stuck payments and refunds are closed by reconcile** (`payments:reconcile`, `refunds:reconcile`) every minute, once they have been processing longer than `PSP_RECONCILE_AFTER` (60 s). Until then the client sees `202` / `processing`.
 - **A retry gets the stored response.** A `202` replayed by laravel-idempotency still says `processing` after the payment finished. Read `GET /api/payments/{id}` for the current status.
-- **A refund with an unclear PSP answer** returns `503` and keeps its amount reserved. Retrying with the same key completes it (the refund id is derived from the key). If the client never retries, the reservation stays. A refund reconcile is not built yet.
+- **A refund with an unclear PSP answer** returns `503` and keeps its amount reserved until it is resolved. A retry with the same key completes it (the refund id is derived from the key), or `refunds:reconcile` does it within about a minute. Both go through one idempotent `RefundOutcomes`, so the refund happens once whichever comes first.
 - **The fake PSP shares the database** so `demo:verify` can count real charges. A real provider would be reconciled from its reports instead.
 - **Demo security.** The demo API key and webhook secret are public on purpose, and `/metrics` is open inside the compose network.
 
@@ -184,7 +184,7 @@ The suite covers the following:
 - each endpoint, including the replay, the 422 for a different body and the 409 for a concurrent request;
 - rollback of payment + order + event together;
 - webhooks: signature, replay window and duplicates;
-- webhook vs reconcile in both orders;
+- webhook vs reconcile and client retry vs refund reconcile, each in both orders;
 - the ledger against real RabbitMQ: duplicates, DLQ and retry, SIGTERM;
 - the HTTP gateway against the fake PSP running in a real server process;
 - `demo:verify` against each kind of violation.

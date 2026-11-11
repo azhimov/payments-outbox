@@ -29,11 +29,24 @@ final class ScriptedGateway implements PaymentGateway
 
     public ChargeResult $refundResult;
 
+    public ChargeResult $refundStatusResult;
+
+    /** @var list<string> */
+    public array $refundStatusQueries = [];
+
     public function __construct(
         public ChargeResult $chargeResult = new ChargeResult(ChargeOutcome::Succeeded, 'psp_test'),
         public ChargeResult $statusResult = new ChargeResult(ChargeOutcome::NotFound),
     ) {
         $this->refundResult = new ChargeResult(ChargeOutcome::Succeeded, 'psp_refund');
+        $this->refundStatusResult = new ChargeResult(ChargeOutcome::NotFound);
+    }
+
+    public function refundStatus(string $refundId): ChargeResult
+    {
+        $this->refundStatusQueries[] = $refundId;
+
+        return $this->refundStatusResult;
     }
 
     public function charge(ChargeRequest $request): ChargeResult

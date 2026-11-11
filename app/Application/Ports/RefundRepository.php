@@ -13,6 +13,15 @@ interface RefundRepository
 
     public function amount(string $refundId): ?int;
 
+    public function paymentId(string $refundId): ?string;
+
+    /**
+     * Ids of refunds still processing and last touched before $before, oldest first.
+     *
+     * @return list<string>
+     */
+    public function processingSince(\DateTimeImmutable $before, int $limit): array;
+
     /** Sum of refunds still processing (reserved) for a payment. */
     public function reserved(string $paymentId): int;
 

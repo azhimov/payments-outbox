@@ -33,6 +33,11 @@ final readonly class MeteredPaymentGateway implements PaymentGateway
         return $this->measure('refund', fn (): ChargeResult => $this->inner->refund($request));
     }
 
+    public function refundStatus(string $refundId): ChargeResult
+    {
+        return $this->measure('refund_status', fn (): ChargeResult => $this->inner->refundStatus($refundId));
+    }
+
     /**
      * @param  Closure(): ChargeResult  $call
      */

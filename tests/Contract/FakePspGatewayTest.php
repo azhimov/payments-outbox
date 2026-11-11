@@ -137,3 +137,12 @@ it('refunds through the PSP once per refund id and maps a refusal to declined', 
         ->and($tooMuch->outcome)->toBe(ChargeOutcome::Declined)
         ->and($tooMuch->reason)->toBe('refund_exceeds_capture');
 });
+
+it('asks the PSP whether a refund was made', function (): void {
+    $paymentId = (string) Str::uuid7();
+    chargeWith('tok_success', $paymentId);
+    $this->gateway->refund(new RefundRequest('rfs-'.$paymentId, $paymentId, Money::of(1_000, Currency::KZT())));
+
+    expect($this->gateway->refundStatus('rfs-'.$paymentId)->outcome)->toBe(ChargeOutcome::Succeeded)
+        ->and($this->gateway->refundStatus('rfs-none-'.$paymentId)->outcome)->toBe(ChargeOutcome::NotFound);
+});

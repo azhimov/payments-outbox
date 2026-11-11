@@ -55,6 +55,8 @@ final class GuaranteesVerifier
 
             $this->zero('payments still processing', DB::table('payments')->where('status', 'processing')->count()),
 
+            $this->zero('refunds still processing', DB::table('refunds')->where('status', 'processing')->count()),
+
             $this->zero('outbox messages not delivered', DB::table('outbox_messages')->where('status', '!=', 'published')->count()),
 
             // Lost events: every capture and every refund booked exactly once.

@@ -53,6 +53,11 @@ final readonly class HttpPaymentGateway implements PaymentGateway
             ]));
     }
 
+    public function refundStatus(string $refundId): ChargeResult
+    {
+        return $this->call(fn (PendingRequest $http): Response => $http->get('/psp/refunds/'.rawurlencode($refundId)));
+    }
+
     /**
      * @param  callable(PendingRequest): Response  $send
      */

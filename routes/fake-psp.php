@@ -10,4 +10,5 @@ Route::prefix('psp')->group(function (): void {
     Route::post('/payments', [FakePspController::class, 'charge']);
     Route::get('/payments/{paymentId}', [FakePspController::class, 'show']);
     Route::post('/payments/{paymentId}/refunds', [FakePspController::class, 'refund']);
+    Route::get('/refunds/{refundId}', [FakePspController::class, 'refundStatus']);
 });

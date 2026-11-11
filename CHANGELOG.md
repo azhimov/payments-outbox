@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Payment state machine (created → processing → succeeded | declined | failed → partially_refunded | refunded) with integer money.
 - Charging outside any transaction; payment, order and `payment.succeeded` committed together through azhimov/laravel-outbox; unknown PSP outcomes stay processing.
 - Signed PSP webhooks (HMAC-SHA256 over timestamp.body, 5-minute window) deduplicated by the inbox, and `payments:reconcile` every minute, both through one idempotent `PaymentOutcomes`.
-- Refunds with ids derived from the Idempotency-Key, `payment.refunded` on the order's aggregate.
+- Refunds with ids derived from the Idempotency-Key, `payment.refunded` on the order's aggregate; `refunds:reconcile` every minute finishes refunds left processing after an unclear PSP answer, through the same idempotent `RefundOutcomes` as client retries.
 - Double-entry ledger fed from RabbitMQ (`ledger:consume`, inbox, DLQ, `ledger:dlq-retry`, graceful shutdown).
 - Fake PSP with deterministic tokens, random failure rates, late answers and duplicate webhooks.
 - Prometheus metrics and a provisioned Grafana dashboard; OpenAPI 3.1 with Swagger UI.

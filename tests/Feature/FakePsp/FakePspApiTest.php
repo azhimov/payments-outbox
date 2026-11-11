@@ -110,3 +110,12 @@ it('refunds a captured charge once per refund key, up to the captured amount', f
     $this->postJson('/psp/payments/'.Str::uuid7().'/refunds', ['amount' => 1], ['Idempotency-Key' => 'rf-4'])->assertNotFound();
     $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 1])->assertStatus(400);
 });
+
+it('answers the status of a refund by our refund id', function (): void {
+    $paymentId = (string) Str::uuid7();
+    pspCharge('tok_success', $paymentId, 1_000);
+    $this->postJson("/psp/payments/{$paymentId}/refunds", ['amount' => 100], ['Idempotency-Key' => 'rf-status'])->assertCreated();
+
+    $this->getJson('/psp/refunds/rf-status')->assertOk()->assertJsonPath('status', 'succeeded')->assertJsonPath('amount', 100);
+    $this->getJson('/psp/refunds/rf-unknown')->assertNotFound();
+});
