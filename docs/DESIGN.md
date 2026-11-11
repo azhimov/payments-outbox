@@ -4,6 +4,18 @@
 
 Домен вымышленный: магазин «Demo Store», фейковый эквайринг. Никакого кода, названий, схем и данных SmartGas, Freedom Pay и других работодателей.
 
+## Решения перед реализацией (11.11.2026)
+- **A. Неизвестный исход у PSP** (таймаут, 5xx): платёж остаётся `processing`, API отвечает `202` со статусом pending. `failed` — только при явном отказе «не обработано». Иначе клиент повторит с новым ключом и получит двойное списание.
+- **B. Транзакции:** tx1 создаёт платёж `processing` → вызов PSP вне транзакции → tx2 (статус платежа, заказ `paid`, `payment.succeeded` в outbox).
+- **Сверка:** fake-psp отдаёт `GET /payments/{payment_id}`; `payments:reconcile` каждую минуту берёт платежи в `processing` старше N секунд и доводит их до финального статуса **тем же use case, что webhook**. Webhook и reconcile идемпотентны друг относительно друга: первый переводит, второй — no-op. В Limitations: застрявшие платежи закрывает reconcile.
+- **C.** Наш `payment_id` — idempotency-ключ к PSP; fake-psp на повтор с тем же ключом возвращает тот же результат без второго списания.
+- **D.** Таблица `merchants`, sha256 от API-ключа, демо-ключ из seeder; свой `ScopeResolver` по `merchant_id`.
+- **E. Ledger — двойная запись:** `ledger_accounts` (psp_clearing, merchant_payable, refunds…) и `ledger_entries` (transaction_id, account, amount в минорных единицах, direction). Сумма по transaction_id = 0 — проверяется в коде и в `demo:verify`. Возврат — обратные проводки, не удаление.
+- **F. Consumer:** `ledger:consume` (php-amqplib `basic_consume`, prefetch из конфига), ack после коммита inbox, ошибка → reject в DLQ `ledger.dlq`, graceful shutdown по SIGTERM, `ledger:dlq-retry`. Топологию объявляет `rabbitmq:setup`.
+- **G.** Consumer-сторона чтения — в пакет: laravel-outbox 0.2.0 с `RabbitMqTransport::receive()` / `RedisStreamsTransport::receive()`. Порядок: шаги 2–7 приложения → релиз пакета 0.2.0 → шаг 8.
+- **H.** `make chaos` — Makefile на хосте (kill relay, restart rabbitmq), нагрузка и сверка — `demo:load` / `demo:verify` в cli-контейнере. Метрики — `promphp/prometheus_client_php` с хранилищем в Redis.
+- Валюта только KZT; predis; подпись webhook HMAC-SHA256 над `timestamp.body`, окно 5 минут; правило «фреймворк не проникает в Domain» — своё PHPStan-правило в `tools/phpstan`.
+
 ## Сценарий
 1. `POST /api/orders`: создать заказ (позиции, сумма, валюта KZT).
 2. `POST /api/orders/{id}/payments` с заголовком `Idempotency-Key`: создать платёж и вызвать фейковый PSP.
