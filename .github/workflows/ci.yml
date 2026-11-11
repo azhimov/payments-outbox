@@ -62,6 +62,10 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      # Laravel reads .env on every boot and needs an APP_KEY: give the runner one.
+      - name: Prepare environment
+        run: cp .env.example .env && php artisan key:generate --ansi
+
       - name: Run tests with coverage
         run: vendor/bin/pest --ci --coverage --min=85
         env:
