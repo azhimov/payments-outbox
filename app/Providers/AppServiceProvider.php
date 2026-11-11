@@ -9,6 +9,7 @@ use App\Application\Ports\Clock;
 use App\Application\Ports\Deduplicator;
 use App\Application\Ports\IdGenerator;
 use App\Application\Ports\IntegrationEvents;
+use App\Application\Ports\LedgerRepository;
 use App\Application\Ports\MerchantDirectory;
 use App\Application\Ports\OrderRepository;
 use App\Application\Ports\PaymentGateway;
@@ -16,6 +17,7 @@ use App\Application\Ports\PaymentRepository;
 use App\Application\Ports\TransactionRunner;
 use App\Infrastructure\Messaging\InboxDeduplicator;
 use App\Infrastructure\Messaging\OutboxIntegrationEvents;
+use App\Infrastructure\Persistence\DatabaseLedgerRepository;
 use App\Infrastructure\Persistence\EloquentMerchantDirectory;
 use App\Infrastructure\Persistence\EloquentOrderRepository;
 use App\Infrastructure\Persistence\EloquentPaymentRepository;
@@ -39,6 +41,7 @@ final class AppServiceProvider extends ServiceProvider
         IntegrationEvents::class => OutboxIntegrationEvents::class,
         Deduplicator::class => InboxDeduplicator::class,
         Clock::class => SystemClock::class,
+        LedgerRepository::class => DatabaseLedgerRepository::class,
     ];
 
     public function register(): void

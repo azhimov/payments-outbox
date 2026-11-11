@@ -63,6 +63,17 @@ services:
       rabbitmq-setup:
         condition: service_completed_successfully
 
+  # Books payment events from RabbitMQ into the double-entry ledger, through the inbox.
+  ledger:
+    <<: *app
+    command: ["php", "artisan", "ledger:consume"]
+    stop_grace_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+
   # Laravel scheduler: payments:reconcile every minute.
   scheduler:
     <<: *app

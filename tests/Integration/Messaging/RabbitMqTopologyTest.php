@@ -25,6 +25,9 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     if (isset($this->amqp)) {
+        // Leave nothing behind for a consumer of a running demo on the same broker.
+        $this->channel->queue_purge('ledger');
+        $this->channel->queue_purge('ledger.dlq');
         $this->channel->close();
         $this->amqp->close();
     }
